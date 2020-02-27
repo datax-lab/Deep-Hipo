@@ -1,13 +1,15 @@
 import numpy as np
-
-from keras.layers import Input,GlobalAveragePooling2D
+import tensorflow as tf
+from Dilationlayer import Dilationlayer,CNNlayer
+from keras.layers import Input,GlobalAveragePooling2D,GlobalMaxPooling2D,SpatialDropout2D
 import os
-from helper import InceptionA, InceptionB, InceptionC, InceptionD, InceptionE, Dilationlayer
-
+from InceptionA import InceptionA
+from InceptionB import InceptionB
+from InceptionC import InceptionC
+from InceptionD import InceptionD
+from InceptionE import InceptionE
 from keras.layers import  BatchNormalization,Activation,concatenate
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-#The GPU id to use, usually either "0" or "1"
-os.environ["CUDA_VISIBLE_DEVICES"]="5"
+from keras.regularizers import l2
 from keras.models import Model,Sequential
 from keras.layers.core import Dense, Dropout, Activation, Flatten
         
@@ -20,22 +22,40 @@ class CATNet():
         
     def bulid(self,input_img):
         model  = Dilationlayer(self.name+"baselayer").bulid(input_img)
+        # model = Dilationlayer(self.name + "baselayer1").bulid(input_img)
+        # model = Dropout(0.2)(model)
+        # model = Dilationlayer(self.name + "baselayer1").bulid(model)
+        # with tf.device('/device:GPU:1'):
+        # model = Dropout(0.25)(model)
         model  = InceptionA(self.name+"mixedA1").bulid(model)
+        # # model = Dropout(0.2)(model)
+        # # # model = Dropout(0.25)(model)
         model  = InceptionA(self.name+"mixedA2").bulid(model)
         model  = InceptionA(self.name+"mixedA3").bulid(model)
         model  = InceptionB(self.name+"mixedB1").bulid(model)
+        # # model = Dropout(0.2)(model)
+        # # # model = Dropout(0.25)(model)
+        # # # with tf.device('/device:GPU:2'):
         model  = InceptionC(self.name+"mixedC1",128).bulid(model)
         model  = InceptionC(self.name+"mixedC2",160).bulid(model)
+        # model = Dropout(0.25)(model)
         model  = InceptionC(self.name+"mixedC3",160).bulid(model)
         model  = InceptionC(self.name+"mixedC4",192).bulid(model)
+        # # with tf.device('/device:GPU:3'):
         model  = InceptionD(self.name+"mixedD1").bulid(model)
+        # # # model = Dropout(0.25)(model)
         model  = InceptionE(self.name+"mixedE1").bulid(model)
+        # model = Dropout(0.2)(model)
         model  = InceptionE(self.name+"mixedE2").bulid(model)
+
+        # with tf.device('/device:GPU:'):
+        # model = Dropout(0.4)(model)
         model = Model(input_img,model)
+
         return model
 
 
-        
+
 
 class CATNet2():
     
@@ -45,19 +65,32 @@ class CATNet2():
 
         
 
-    def bulid(InputA,InputB,modelname = "CAT_Net2"):
-        
-
-        CATNet_Track1 = CATNet(modelname +"Track1").bulid(InputA)
+    def bulid(InputA,InputB):
+        # with tf.device('/device:GPU:0'):
+        CATNet_Track1 = CATNet("20xTrack").bulid(InputA)
         CATNet_Track1output = CATNet_Track1.output
-        CATNet_Track2 = CATNet(modelname+"Track2").bulid(InputB)
+
+        CATNet_Track2 = CATNet("5xTrack").bulid(InputB)
+
         CATNet_Track2output = CATNet_Track2.output
+        # CATNet_Track2 = Dropout(0.4)(CATNet_Track2)
         CATNet_Track1flat = GlobalAveragePooling2D()(CATNet_Track1output)
-        CATNet_Track2flat = GlobalAveragePooling2D()(CATNet_Track2output)
+
+
+        CATNet_Track2flat =  GlobalAveragePooling2D()(CATNet_Track2output)
+        # CATNet_Track2flat = Flatten()(CATNet_Track2flat)
         combined = concatenate([CATNet_Track1flat, CATNet_Track2flat])
-        z = Dense(2048, activation='relu')(combined)
-        predictions = Dense(1, activation='softmax')(z)
+
+        z = Dense(1024, activation='tanh',kernel_regularizer = l2(0.04))(combined)
+        # z = Dense(512, activation='tanh')(z)
+        z = Dropout(0.2)(z)
+        predictions = Dense(1, activation='sigmoid',kernel_regularizer = l2(0.04))(z)
         model = Model(inputs=[CATNet_Track1.input,CATNet_Track2.input], outputs=predictions)
         return model
 
-    
+
+# if __name__ = "__main__":
+#     InputA = Input(shape=(299, 299,3))
+#     InputB = Input(shape=(299, 299,3))
+#     model = CATNet2.bulid(InputA, InputB)
+        
