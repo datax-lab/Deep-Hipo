@@ -34,8 +34,8 @@ class IndiviualCNN():
 
         Dilatedlayer = Conv2D(self.filters, (self.num_row,self.num_col),dilation_rate = self.dilation_rate,strides=(1,1),padding=self.Padding,use_bias=False,name = self.conv_name, kernel_regularizer = self.Kernel_regularizer)(inputlayer)
         BatchNor = BatchNormalization(axis = 1, scale= False, name = self.bn_name)(Dilatedlayer)
-        BatchNor = Dropout(0.2)(BatchNor)
-        # BatchNor = SpatialDropout2D(0.4)(BatchNor)
+        # BatchNor = Dropout(0.2)(BatchNor)
+        BatchNor = SpatialDropout2D(0.4)(BatchNor)
         Act = Activation('tanh', name= self.name)(BatchNor)
         return Act
         
@@ -53,7 +53,7 @@ class InceptionA():
         branch1x1 = IndiviualCNN(64,1,1,name = self.name+"inceptiona1x1").bulid(inputmodel)
 
         #branch2
-        branch5x5_1 = IndiviualCNN(48,1,1,name = self.name+"inceptiona5x5_1").bulid(branch1x1 )
+        branch5x5_1 = IndiviualCNN(48,1,1,name = self.name+"inceptiona5x5_1").bulid(inputmodel)
         branch5x5_2 = IndiviualCNN(64,5,5,name = self.name+"inceptiona5x5_2").bulid(branch5x5_1)
 
         #branch3
