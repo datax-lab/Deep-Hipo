@@ -1,2 +1,2 @@
-# CAT-Net2
-CANCER Texture Net 2.0
+# Deep learning model for HIstoPatholOgy (Deep-Hipo)
+
